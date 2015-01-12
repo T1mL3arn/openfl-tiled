@@ -92,7 +92,7 @@ class TiledMap extends Sprite {
 
 	public var renderer(default, null):Renderer;
 
-	private function new(path:String, renderer:Renderer, ?render:Bool = true) {
+	public function new(path:String, renderer:Renderer, ?render:Bool = true) {
 		super();
 
 		this.path = path;
@@ -102,11 +102,12 @@ class TiledMap extends Sprite {
 		parseXML(xml);
 
 		this.renderer = renderer;
-
-		renderer.setTiledMap(this);
-
-		if(render) {
-			this.addEventListener(Event.ADDED_TO_STAGE, onAddedToStage);
+		
+		if (renderer != null)
+		{
+			renderer.setTiledMap(this);
+			if (render)
+				this.addEventListener(Event.ADDED_TO_STAGE, onAddedToStage);
 		}
 	}
 
