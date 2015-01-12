@@ -73,4 +73,24 @@ class Helper {
 
 		return Path.normalize(path1 + path2);
 	}
+	
+	public static inline function avoidNullInt(value:Null<String>):Int
+	{
+		#if (flash || cpp || windows && !neko)
+		return Std.parseInt(value);
+		#else
+		var r = Std.parseInt(value);
+		return r == null ? 0 : r;
+		#end
+	}
+	
+	public static inline function avoidNullFloat(value:Null<String>):Float
+	{
+		#if (flash || cpp || windows && !neko)
+		return Std.parseFloat(value);
+		#else
+		var r = Std.parseInt(value);
+		return r == null ? 0 : r;
+		#end
+	}
 }
