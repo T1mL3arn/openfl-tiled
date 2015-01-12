@@ -28,6 +28,7 @@ package openfl.tiled;
 import flash.geom.Rectangle;
 import flash.utils.ByteArray;
 import flash.utils.Endian;
+import openfl.utils.CompressionAlgorithm;
 
 import openfl.display.Tilesheet;
 
@@ -199,7 +200,7 @@ class Layer {
 				throw "No support for compressed maps in html5 target!";
 			#end
 			#if !js
-				data.uncompress();
+				data.uncompress(CompressionAlgorithm.ZLIB);
 			#end
 		data.endian = Endian.LITTLE_ENDIAN;
 
@@ -222,10 +223,11 @@ class Layer {
 		}
 
 		var i:Int = 0;
-
+		var char:String = null;
 		while (i < data.length - 3) {
 			// Ignore whitespace
-			if (data.charAt(i) == " " || data.charAt(i) == "\n"){
+			char = data.charAt(i);
+			if (char == " " || char == "\n" || char == '\r'){
 				i++; continue;
 			}
 
