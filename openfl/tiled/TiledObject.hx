@@ -23,6 +23,16 @@ package openfl.tiled;
 
 import flash.geom.Point;
 
+enum FigureType
+{
+	RECTANGLE;
+	ELLIPSE;
+	CIRCLE;
+	POLYGON;
+	POLYLINE;
+	TILE;
+}
+
 class TiledObject {
 
 	/** The objectgroup this object belongs to */
@@ -36,6 +46,9 @@ class TiledObject {
 
 	/** The type of this object */
 	public var type(default, null):String;
+	
+	/** The real type of figure from Tiled Editor */
+	public var figureType(default, null):FigureType;
 
 	/** The x coordinate of this object (in pixels!) */
 	public var x(default, null):Float;
@@ -55,21 +68,18 @@ class TiledObject {
 	/** Check if this object has a polylines */
 	public var hasPolyline(get_hasPolyline, null):Bool;
 
-	/** The polygon of this object. Default: null */
-	public var polygon(default, null):TiledPolygon;
-
-	/** The polyline of this object. Default:null */
-	public var polyline(default, null):TiledPolyline;
-
 	/** Contains all properties from this object */
 	public var properties(default, null):Map<String, String>;
 	
-	/** Rotation of this object clockwise in degrees. */
+	/** Rotation of this object clockwise in degrees */
 	public var rotation(default, null):Float;
+	
+	/** Points that represent polygon or polylone in local coordinate system */
+	public var polyData(default, null):Array<Point>;
 
 	private function new(parent:TiledObjectGroup, gid:Int, name:String, type:String, x:Float, y:Float,
-			width:Float, height:Float, polygon:TiledPolygon, polyline:TiledPolyline,
-			properties:Map<String, String>, rotation:Float = 0) {
+			width:Float, height:Float, polyData:Array<Point>,
+			properties:Map<String, String>, rotation:Float, figureType:FigureType) {
 		this.parent = parent;
 		this.gid = gid;
 		this.name = name;
@@ -78,15 +88,15 @@ class TiledObject {
 		this.y = y;
 		this.width = width;
 		this.height = height;
-		this.polygon = polygon;
-		this.polyline = polyline;
+		this.polyData = polyData;
 		this.properties = properties;
 		this.rotation = rotation;
+		this.figureType = figureType;
 	}
 
 	/** Creates a new TiledObject-instance from the given Xml code. */
 	public static function fromGenericXml(xml:Xml, parent:TiledObjectGroup):TiledObject {
-		var gid:Int = xml.get("gid") != null ? Std.parseInt(xml.get("gid")) : 0;
+		var gid:Int = xml.exists("gid") ? Helper.avoidNullInt(xml.get("gid")) : 0;
 		var name:String = xml.get("name");
 		var type:String = xml.get("type");
 		var x:Float = Helper.avoidNullFloat(xml.get("x")); 					//Std.parseInt(xml.get("x"));
@@ -94,12 +104,19 @@ class TiledObject {
 		var width:Float = Helper.avoidNullFloat(xml.get("width"));			//Std.parseInt(xml.get("width"));
 		var height:Float = Helper.avoidNullFloat(xml.get("height"));		//Std.parseInt(xml.get("height"));
 		var rotation:Float = Helper.avoidNullFloat(xml.get("rotation"));	//Std.parseFloat(xml.get("rotation"));
-		var polygon:TiledPolygon = null;
-		var polyline:TiledPolyline = null;
 		var properties:Map<String, String> = new Map<String, String>();
+		var figureType:FigureType = null;
+		var polyData:Array<Point> = null;
 		
-		for (child in xml) {
-			if(Helper.isValidElement(child)) {
+		if(gid > 0)
+			figureType = FigureType.TILE;											// image tile
+		else		
+			figureType = FigureType.RECTANGLE;										// and just rectangle
+		
+		for (child in xml) 
+		{
+			if (Helper.isValidElement(child)) 
+			{
 				if (child.nodeName == "properties") {
 					for (property in child) {
 						if(Helper.isValidElement(property)) {
@@ -107,40 +124,46 @@ class TiledObject {
 						}
 					}
 				}
+				
+				if (child.nodeName == 'ellipse') {											// ellipse (or pseudo 'circle' object)
+					x += width / 2;
+					y += height / 2;
+					
+					if (width == height)
+						figureType = FigureType.CIRCLE;
+					else
+						figureType = FigureType.ELLIPSE;
+						
+				} else if (child.nodeName == "polygon" || child.nodeName == "polyline") {	// polygon or polyline
+					
+					polyData = new Array<Point>();
 
-				if (child.nodeName == "polygon" || child.nodeName == "polyline") {
-					var origin:Point = new Point(x, y);
-					//var origin:Point = new Point(Std.parseFloat(xml.get("x"), Std.parseFloat(xml.get("y"));
-					var points:Array<Point> = new Array<Point>();
-
-					var pointsAsString:String = child.get("points");
-
-					var pointsAsStringArray:Array<String> = pointsAsString.split(" ");
+					var pointsAsStringArray:Array<String> = child.get("points").split(" ");
 
 					for(p in pointsAsStringArray) {
 						var coords:Array<String> = p.split(",");
-						points.push(new Point(Std.parseFloat(coords[0]), Std.parseFloat(coords[1])));
+						polyData.push(new Point(Std.parseFloat(coords[0]), Std.parseFloat(coords[1])));
 					}
 
-					if(child.nodeName == "polygon") {
-						polygon = new TiledPolygon(origin, points);
-					} else if(child.nodeName == "polyline") {
-						polyline = new TiledPolyline(origin, points);
-					}
-				}
+					if(child.nodeName == "polygon") 
+						figureType = FigureType.POLYGON;
+					else if(child.nodeName == "polyline")
+						figureType = FigureType.POLYLINE;
+				}									
 			}
+			
 		}
-
+		
 		return new TiledObject(parent, gid, name, type, x, y, width,
-			height, polygon, polyline, properties, rotation);
+			height, polyData, properties, rotation, figureType);
 	}
 
-	private function get_hasPolygon():Bool {
-		return this.polygon != null;
+	private inline function get_hasPolygon():Bool {
+		return figureType == FigureType.POLYGON;
 	}
 
 	private function get_hasPolyline():Bool {
-		return this.polyline != null;
+		return figureType == FigureType.POLYLINE;
 	}
 
 }
