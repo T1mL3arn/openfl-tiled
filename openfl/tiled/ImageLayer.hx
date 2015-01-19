@@ -25,7 +25,7 @@ import haxe.io.Path;
 
 class ImageLayer {
 
-	public var tiledMap(default, null):TiledMap;
+	public var tiledMap(default, null):TiledMap_;
 	public var name(default, null):String;
 	public var opacity(default, null):Float;
 	public var visible(default, null):Bool;
@@ -33,7 +33,7 @@ class ImageLayer {
 	public var properties(default, null):Map<String, String>;
 	public var image(default, null):TilesetImage;
 
-	private function new(tiledMap:TiledMap, name:String, opacity:Float, visible:Bool, properties:Map<String, String>,
+	private function new(tiledMap:TiledMap_, name:String, opacity:Float, visible:Bool, properties:Map<String, String>,
 			image:TilesetImage) {
 		this.tiledMap = tiledMap;
 		this.name = name;
@@ -43,7 +43,35 @@ class ImageLayer {
 		this.image = image;
 	}
 
-	public static function fromGenericXml(tiledMap:TiledMap, xml:Xml):ImageLayer {
+	/*public static function fromGenericXml(tiledMap:TiledMap, xml:Xml):ImageLayer {
+		var name:String = xml.get("name");
+		var opacity:Float = xml.exists("opacity") ? Std.parseFloat(xml.get("opacity")) : 1.0;
+		var visible:Bool = xml.exists("visible") ? Std.parseInt("visible") == 1 : false;
+
+		var properties = new Map<String, String>();
+		var image:TilesetImage = null;
+
+		for(child in xml.elements()) {
+			if(Helper.isValidElement(child)) {
+				if(child.nodeName == "properties") {
+					for(property in child) {
+						if(Helper.isValidElement(property)) {
+							properties.set(property.get("name"), property.get("value"));
+						}
+					}
+				}
+			}
+
+			if (child.nodeName == "image") {
+				var prefix = Path.directory(tiledMap.path) + "/";
+				image = new TilesetImage(child.get("source"), child.get("trans"), prefix);
+			}
+		}
+
+		return new ImageLayer(tiledMap, name, opacity, visible, properties, image);
+	}*/
+	
+	public static function fromGenericXml2(tiledMap:TiledMap_, xml:Xml):ImageLayer {
 		var name:String = xml.get("name");
 		var opacity:Float = xml.exists("opacity") ? Std.parseFloat(xml.get("opacity")) : 1.0;
 		var visible:Bool = xml.exists("visible") ? Std.parseInt("visible") == 1 : false;

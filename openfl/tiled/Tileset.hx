@@ -32,7 +32,7 @@ import openfl.display.Tilesheet;
 class Tileset {
 
 	/** The TiledMap object this tileset belongs to */
-	public var tiledMap(default, null):TiledMap;
+	public var tiledMap(default, null):TiledMap_;
 
 	/** The first GID this tileset has */
 	public var firstGID(default, null):Int;
@@ -70,7 +70,7 @@ class Tileset {
 	/** The tile offset */
 	public var offset(default, null):Point;
 
-	private function new(tiledMap:TiledMap, name:String, tileWidth:Int, tileHeight:Int, spacing:Int,
+	private function new(tiledMap:TiledMap_, name:String, tileWidth:Int, tileHeight:Int, spacing:Int,
 			properties:Map<String, String>, terrainTypes:Array<TerrainType>, image:TilesetImage, offset:Point) {
 		this.tiledMap = tiledMap;
 		this.name = name;
@@ -89,7 +89,82 @@ class Tileset {
 	}
 
 	/** Generates a new Tileset from the given Xml code */
-	public static function fromGenericXml(tiledMap:TiledMap, content:String):Tileset {
+	/*public static function fromGenericXml(tiledMap:TiledMap, content:String):Tileset {
+		var xml = Xml.parse(content).firstElement();
+
+		var name:String = xml.get("name");
+		var tileWidth:Int = Std.parseInt(xml.get("tilewidth"));
+		var tileHeight:Int = Std.parseInt(xml.get("tileheight"));
+		var spacing:Int = xml.exists("spacing") ? Std.parseInt(xml.get("spacing")) : 0;
+		var properties:Map<String, String> = new Map<String, String>();
+		var propertyTiles:Map<Int, PropertyTile> = new Map<Int, PropertyTile>();
+		var terrainTypes:Array<TerrainType> = new Array<TerrainType>();
+		var image:TilesetImage = null;
+
+		var tileOffsetX:Int = 0;
+		var tileOffsetY:Int = 0;
+
+		for (child in xml.elements()) {
+			if(Helper.isValidElement(child)) {
+				if (child.nodeName == "properties") {
+					for (property in child) {
+						if (Helper.isValidElement(property)) {
+							properties.set(property.get("name"), property.get("value"));
+						}
+					}
+				}
+
+				if (child.nodeName == "tileoffset") {
+					tileOffsetX = Std.parseInt(child.get("x"));
+					tileOffsetY = Std.parseInt(child.get("y"));
+				}
+
+				if (child.nodeName == "image") {
+					var prefix = Path.directory(tiledMap.path) + "/";
+					image = new TilesetImage(child.get("source"), child.get("trans"), prefix);
+				}
+
+				if (child.nodeName == "terraintypes") {
+					for (element in child) {
+
+						if(Helper.isValidElement(element)) {
+							if(element.nodeName == "terrain") {
+								terrainTypes.push(new TerrainType(element.get("name"), Std.parseInt(element.get("tile"))));
+							}
+						}
+					}
+				}
+
+				if (child.nodeName == "tile") {
+					var id:Int = Std.parseInt(child.get("id"));
+					var properties:Map<String, String> = new Map<String, String>();
+
+					for (element in child) {
+
+						if(Helper.isValidElement(element)) {
+							if (element.nodeName == "properties") {
+								for (property in element) {
+									if (!Helper.isValidElement(property)) {
+										continue;
+									}
+
+									properties.set(property.get("name"), property.get("value"));
+								}
+							}
+						}
+					}
+
+					propertyTiles.set(id, new PropertyTile(id, properties));
+				}
+			}
+		}
+
+		return new Tileset(tiledMap, name, tileWidth, tileHeight, spacing, properties, terrainTypes,
+			image, new Point(tileOffsetX, tileOffsetY));
+	}*/
+	
+	/** Generates a new Tileset from the given Xml code */
+	public static function fromGenericXml2(tiledMap:TiledMap_, content:String):Tileset {
 		var xml = Xml.parse(content).firstElement();
 
 		var name:String = xml.get("name");

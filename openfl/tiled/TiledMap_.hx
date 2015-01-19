@@ -1,51 +1,68 @@
-// Copyright (C) 2013 Christopher "Kasoki" Kaster
-//
-// This file is part of "openfl-tiled". <http://github.com/Kasoki/openfl-tiled>
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the
-// Software is furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
 package openfl.tiled;
-
-import flash.geom.Rectangle;
-import flash.geom.Point;
-import flash.display.Sprite;
-import flash.display.Bitmap;
-import flash.display.BitmapData;
-import flash.events.Event;
-
 import haxe.io.Path;
-
-import openfl.display.Tilesheet;
-
-import openfl.tiled.display.Renderer;
-
-#if !flash
-import openfl.tiled.display.TilesheetRenderer;
-#else
-import openfl.tiled.display.CopyPixelsRenderer;
-#end
+import lime.net.URLRequest;
+import openfl.events.Event;
+import openfl.net.URLLoader;
 
 /**
- * This class represents a TILED map
- * @author Christopher Kaster
+ * ...
+ * @author Timur Artiukhov
  */
-class TiledMap extends Sprite {
-
+class TiledMap_
+{
+	/** Builds map from embedded asset */
+	public static function getFromAssets(path:String):TiledMap_
+	{
+		//path = Helper.joinPath(prefix, path);
+		
+		var xml = Assets.getText(Helper.joinPath("", path));
+		var tiledMap = new TiledMap_(path);
+		tiledMap.parseXML(xml);
+		
+		return tiledMap;
+	}
+	
+	/** Asynchronously loads and builds map from embedded asset 
+	 * @param	handler	Here you can get your map after loading.
+	 */
+	public static function loadFromAssets(path:String, handler:TiledMap_->Void):Void
+	{	
+		var tiledMap = new TiledMap_(path);
+		function complete_(text:String)
+		{
+			tiledMap.parseXML(text);
+			handler(tiledMap);
+		}
+		
+		Assets.loadText(Helper.joinPath("", path), complete_);
+	}
+	
+	/** Asynchronously loads map from external path 
+	 *
+	 * @return	URLLoader object, if you want to control loading process. 
+	*/
+	public static function loadExtern(path:String, handler:TiledMap_->Void):URLLoader
+	{
+		var request:URLRequest = new URLRequest(Helper.joinPath("", path));
+		request.contentType = 'text/xml';
+		
+		var loader:URLLoader = new URLLoader();
+		var tiledMap = new TiledMap_(path);
+		
+		var onComplete = function(e:Event):Void
+		{
+			var loader2:URLLoader = cast e.target;
+			var xml:String = cast loader2.data;
+			tiledMap.parseXML(xml);
+			handler(tiledMap);
+		}
+		
+		loader.addEventListener(Event.COMPLETE, onComplete);
+		loader.load(request);
+		
+		return loader;
+	}
+	
 	/** The path of the map file */
 	public var path(default, null):String;
 
@@ -89,67 +106,12 @@ class TiledMap extends Sprite {
 	public var properties(default, null):Map<String, String>;
 
 	public var backgroundColorSet(default, null):Bool = false;
-
-	public var renderer(default, null):Renderer;
-
-	public function new(path:String, renderer:Renderer, ?render:Bool = true) {
-		super();
-
+	
+	private function new(path:String) 
+	{
 		this.path = path;
-
-		var xml = Helper.getText(path);
-
-		parseXML(xml);
-
-		this.renderer = renderer;
-		
-		if (renderer != null)
-		{
-			renderer.setTiledMap(this);
-			if (render)
-				this.addEventListener(Event.ADDED_TO_STAGE, onAddedToStage);
-		}
 	}
-
-	private function onAddedToStage(e:Event) {
-		renderer.clear(this);
-
-		for(layer in this.layers) {
-			renderer.drawLayer(this, layer);
-		}
-
-		for(imageLayer in this.imageLayers) {
-			renderer.drawImageLayer(this, imageLayer);
-		}
-	}
-
-	/**
-	 * Creates a new TiledMap from Assets
-	 * @param path The path to your asset
-	 * @param render Should openfl-tiled render the map?
-	 * @return A TiledMap object
-	 */
-	public static function fromAssets(path:String, ?render:Bool = true):TiledMap {
-		#if !flash
-		var renderer = new TilesheetRenderer();
-		#else
-		var renderer = new CopyPixelsRenderer();
-		#end
-
-		return new TiledMap(path, renderer, render);
-	}
-
-	/**
-	 * Creates a new TiledMap from Assets with an alternative Renderer
-	 * @param path The path to your asset
-	 * @param renderer Add your own renderer implementation here
-	 * @return A TiledMap object
-	 */
-	public static function fromAssetsWithAlternativeRenderer(path:String, renderer:Renderer,
-			?render:Bool = true):TiledMap {
-		return new TiledMap(path, renderer, render);
-	}
-
+	
 	private function parseXML(xml:String) {
 		if (xml == null) return;
 		
@@ -189,9 +151,9 @@ class TiledMap extends Sprite {
 
 					if (child.get("source") != null) {
 						var prefix = Path.directory(this.path) + "/";
-						//tileset = Tileset.fromGenericXml(this, Helper.getText(child.get("source"), prefix));
+						tileset = Tileset.fromGenericXml2(this, Helper.getText(child.get("source"), prefix));
 					} else {
-						//tileset = Tileset.fromGenericXml(this, child.toString());
+						tileset = Tileset.fromGenericXml2(this, child.toString());
 					}
 
 					tileset.setFirstGID(Std.parseInt(child.get("firstgid")));
@@ -204,8 +166,7 @@ class TiledMap extends Sprite {
 						properties.set(property.get("name"), property.get("value"));
 					}
 				} else if (child.nodeName == "layer") {
-					//var layer:Layer = Layer.fromGenericXml(child, this);
-					var layer:Layer = null;
+					var layer:Layer = Layer.fromGenericXml2(child, this);
 
 					this.layers.push(layer);
 				} else if (child.nodeName == "objectgroup") {
@@ -213,15 +174,14 @@ class TiledMap extends Sprite {
 
 					this.objectGroups.push(objectGroup);
 				} else if (child.nodeName == "imagelayer") {
-					var imageLayer = null;
-					//var imageLayer = ImageLayer.fromGenericXml(this, child);
+					var imageLayer = ImageLayer.fromGenericXml2(this, child);
 
 					this.imageLayers.push(imageLayer);
 				}
 			}
 		}
 	}
-
+	
 	/**
 	 * Returns the Tileset which contains the given GID.
 	 * @return The tileset which contains the given GID, or if it doesn't exist "null"
@@ -299,4 +259,5 @@ class TiledMap extends Sprite {
 
 		return null;
 	}
+	
 }

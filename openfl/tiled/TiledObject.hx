@@ -126,8 +126,8 @@ class TiledObject {
 				}
 				
 				if (child.nodeName == 'ellipse') {											// ellipse (or pseudo 'circle' object)
-					x += width / 2;
-					y += height / 2;
+					//x += width / 2;
+					//y += height / 2;
 					
 					if (width == height)
 						figureType = FigureType.CIRCLE;

@@ -53,9 +53,9 @@ class Layer {
 	public var tiles(default, null):Array<Tile>;
 
 	/** The parent TiledMap */
-	public var parent(default, null):TiledMap;
+	public var parent(default, null):TiledMap_;
 
-	private function new(parent:TiledMap, name:String, width:Int, height:Int,
+	private function new(parent:TiledMap_, name:String, width:Int, height:Int,
 			opacity:Float, visible:Bool, tiles:Array<Int>) {
 		this.parent = parent;
 		this.name = name;
@@ -77,7 +77,58 @@ class Layer {
 	 * @param
 	 * @return A new layer
 	 */
-	public static function fromGenericXml(xml:Xml, parent:TiledMap):Layer {
+	/*public static function fromGenericXml(xml:Xml, parent:TiledMap):Layer {
+		var name:String = xml.get("name");
+		var width:Int = Std.parseInt(xml.get("width"));
+		var height:Int = Std.parseInt(xml.get("height"));
+		var opacity:Float = Std.parseFloat(xml.get("opacity") != null ?
+			xml.get("opacity") : "1.0");
+		var visible:Bool = xml.get("visible") == null ?
+			true : Std.parseInt(xml.get("visible")) == 1 ?
+				true : false;
+
+		var tileGIDs:Array<Int> = new Array<Int>();
+
+		for (child in xml) {
+			if(Helper.isValidElement(child)) {
+				if (child.nodeName == "data") {
+					var encoding:String = "";
+					if (child.exists("encoding")){
+						encoding = child.get("encoding");
+					}
+					var chunk:String = "";
+					switch(encoding){
+						case "base64":
+							chunk = child.firstChild().nodeValue;
+							var compressed:Bool = false;
+							if (child.exists("compression")){
+								switch(child.get("compression")){
+									case "zlib":
+										compressed = true;
+									default:
+										throw "TiledMap: data compression type not supported!";
+								}
+							}
+							tileGIDs = base64ToArray(chunk, width, compressed);
+						case "csv":
+							chunk = child.firstChild().nodeValue;
+							tileGIDs = csvToArray(chunk);
+						default:
+							for (tile in child) {
+								if (Helper.isValidElement(tile)) {
+									var gid = Std.parseInt(tile.get("gid"));
+									tileGIDs.push(gid);
+								}
+							}
+					}
+				}
+			}
+		}
+
+		return new Layer(parent, name, width, height, opacity, visible, tileGIDs);
+	}*/
+	
+	public static function fromGenericXml2(xml:Xml, parent:TiledMap_):Layer {
 		var name:String = xml.get("name");
 		var width:Int = Std.parseInt(xml.get("width"));
 		var height:Int = Std.parseInt(xml.get("height"));
