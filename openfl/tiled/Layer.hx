@@ -48,27 +48,26 @@ class Layer {
 
 	/** Is the layer visible? */
 	public var visible(default, null):Bool;
+	
+	/** All properties this Layer contains */
+	public var properties(default, null):Map<String, String>;
 
 	/** All tiles which this Layer contains */
-	public var tiles(default, null):Array<Tile>;
+	public var tiles(default, null):Array<Int>;
 
 	/** The parent TiledMap */
 	public var parent(default, null):TiledMap_;
 
 	private function new(parent:TiledMap_, name:String, width:Int, height:Int,
-			opacity:Float, visible:Bool, tiles:Array<Int>) {
+			opacity:Float, visible:Bool, tiles:Array<Int>, properties:Map<String, String>) {
 		this.parent = parent;
 		this.name = name;
 		this.width = width;
 		this.height = height;
 		this.opacity = opacity;
 		this.visible = visible;
-
-		this.tiles = new Array<Tile>();
-
-		for(gid in tiles) {
-			this.tiles.push(Tile.fromGID(gid, this));
-		}
+		this.properties = properties;
+		this.tiles = tiles;
 	}
 
 	/**
@@ -77,7 +76,7 @@ class Layer {
 	 * @param
 	 * @return A new layer
 	 */
-	/*public static function fromGenericXml(xml:Xml, parent:TiledMap):Layer {
+	public static function fromGenericXml(xml:Xml, parent:TiledMap_):Layer {
 		var name:String = xml.get("name");
 		var width:Int = Std.parseInt(xml.get("width"));
 		var height:Int = Std.parseInt(xml.get("height"));
@@ -86,7 +85,7 @@ class Layer {
 		var visible:Bool = xml.get("visible") == null ?
 			true : Std.parseInt(xml.get("visible")) == 1 ?
 				true : false;
-
+		var properties:Map<String, String> = new Map<String, String>();
 		var tileGIDs:Array<Int> = new Array<Int>();
 
 		for (child in xml) {
@@ -122,61 +121,16 @@ class Layer {
 							}
 					}
 				}
-			}
-		}
-
-		return new Layer(parent, name, width, height, opacity, visible, tileGIDs);
-	}*/
-	
-	public static function fromGenericXml2(xml:Xml, parent:TiledMap_):Layer {
-		var name:String = xml.get("name");
-		var width:Int = Std.parseInt(xml.get("width"));
-		var height:Int = Std.parseInt(xml.get("height"));
-		var opacity:Float = Std.parseFloat(xml.get("opacity") != null ?
-			xml.get("opacity") : "1.0");
-		var visible:Bool = xml.get("visible") == null ?
-			true : Std.parseInt(xml.get("visible")) == 1 ?
-				true : false;
-
-		var tileGIDs:Array<Int> = new Array<Int>();
-
-		for (child in xml) {
-			if(Helper.isValidElement(child)) {
-				if (child.nodeName == "data") {
-					var encoding:String = "";
-					if (child.exists("encoding")){
-						encoding = child.get("encoding");
-					}
-					var chunk:String = "";
-					switch(encoding){
-						case "base64":
-							chunk = child.firstChild().nodeValue;
-							var compressed:Bool = false;
-							if (child.exists("compression")){
-								switch(child.get("compression")){
-									case "zlib":
-										compressed = true;
-									default:
-										throw "TiledMap: data compression type not supported!";
-								}
-							}
-							tileGIDs = base64ToArray(chunk, width, compressed);
-						case "csv":
-							chunk = child.firstChild().nodeValue;
-							tileGIDs = csvToArray(chunk);
-						default:
-							for (tile in child) {
-								if (Helper.isValidElement(tile)) {
-									var gid = Std.parseInt(tile.get("gid"));
-									tileGIDs.push(gid);
-								}
-							}
-					}
+				
+				if (child.nodeName == "properties") {
+					for (property in child)
+						if (Helper.isValidElement(property))
+							Helper.setProperty(property, properties);
 				}
 			}
 		}
 
-		return new Layer(parent, name, width, height, opacity, visible, tileGIDs);
+		return new Layer(parent, name, width, height, opacity, visible, tileGIDs, properties);
 	}
 
 	/**
@@ -193,7 +147,7 @@ class Layer {
 		var csv:String = "";
 
 		for(tile in this.tiles) {
-			var tileGID = tile.gid;
+			var tileGID = tile;
 
 			if(counter >= width) {
 				// remove the last ","
@@ -241,18 +195,18 @@ class Layer {
 		return result;
 	}
 
-
 	private static function base64ToArray(chunk:String, lineWidth:Int, compressed:Bool):Array<Int>{
 		var result:Array<Int> = new Array<Int>();
 		var data:ByteArray = base64ToByteArray(chunk);
 
-		if(compressed)
-			#if js
-				throw "No support for compressed maps in html5 target!";
-			#end
-			#if !js
-				data.uncompress(CompressionAlgorithm.ZLIB);
-			#end
+		//if(compressed)
+			//#if js
+				//throw "No support for compressed maps in html5 target!";
+			//#end
+			//#if !js
+				//data.uncompress(CompressionAlgorithm.ZLIB);
+			//#end
+		data.uncompress(CompressionAlgorithm.ZLIB);
 		data.endian = Endian.LITTLE_ENDIAN;
 
 		while(data.position < data.length){
