@@ -33,8 +33,9 @@ class Helper {
 	}
 
 	/** This method checks if the given Xml element is really a Xml element! */
-	public static function isValidElement(element:Xml):Bool {
-		return Std.string(element.nodeType) == "element";
+	public static inline function isValidElement(element:Xml):Bool {
+		//return Std.string(element.nodeType) == "element";
+		return element.nodeType == Xml.Element;
 	}
 
 	/** This method sets a new AssetLoader */
@@ -74,23 +75,38 @@ class Helper {
 		return Path.normalize(path1 + path2);
 	}
 	
-	public static inline function avoidNullInt(value:Null<String>):Int
+	/**
+	 * Tiled stores multiline value of custom property as node value!
+	 */
+	public static function setProperty(property:Xml, target:Map<String, String>):Void
 	{
-		#if (flash || cpp || windows && !neko)
-		return Std.parseInt(value);
+		var name = property.get('name');
+		var value = property.get('value');
+		if (value == null)
+			value = property.firstChild().nodeValue;
+		target.set(name, value);
+	}
+	
+	public static inline function avoidNullInt(v:Int):Int
+	{
+		#if (html5 || js || neko)
+		if (v == null) return 0;
+		else return v;
 		#else
-		var r = Std.parseInt(value);
-		return r == null ? 0 : r;
+		return v;
 		#end
 	}
 	
-	public static inline function avoidNullFloat(value:Null<String>):Float
+	public static inline function avoidNullFloat(v:Float):Float
 	{
-		#if (flash || cpp || windows && !neko)
-		return Std.parseFloat(value);
+		#if (html5 || js || neko)
+		if (v == null || v != v) return 0;
+		else return v;
+		#elseif flash
+		if (v != v) return 0;
+		else return v;
 		#else
-		var r = Std.parseInt(value);
-		return r == null ? 0 : r;
+		return v;
 		#end
 	}
 }
