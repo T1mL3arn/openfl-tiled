@@ -42,40 +42,11 @@ class ImageLayer {
 		this.properties = properties;
 		this.image = image;
 	}
-
-	/*public static function fromGenericXml(tiledMap:TiledMap, xml:Xml):ImageLayer {
-		var name:String = xml.get("name");
-		var opacity:Float = xml.exists("opacity") ? Std.parseFloat(xml.get("opacity")) : 1.0;
-		var visible:Bool = xml.exists("visible") ? Std.parseInt("visible") == 1 : false;
-
-		var properties = new Map<String, String>();
-		var image:TilesetImage = null;
-
-		for(child in xml.elements()) {
-			if(Helper.isValidElement(child)) {
-				if(child.nodeName == "properties") {
-					for(property in child) {
-						if(Helper.isValidElement(property)) {
-							properties.set(property.get("name"), property.get("value"));
-						}
-					}
-				}
-			}
-
-			if (child.nodeName == "image") {
-				var prefix = Path.directory(tiledMap.path) + "/";
-				image = new TilesetImage(child.get("source"), child.get("trans"), prefix);
-			}
-		}
-
-		return new ImageLayer(tiledMap, name, opacity, visible, properties, image);
-	}*/
 	
-	public static function fromGenericXml2(tiledMap:TiledMap_, xml:Xml):ImageLayer {
+	public static function fromGenericXml(tiledMap:TiledMap_, xml:Xml):ImageLayer {
 		var name:String = xml.get("name");
 		var opacity:Float = xml.exists("opacity") ? Std.parseFloat(xml.get("opacity")) : 1.0;
 		var visible:Bool = xml.exists("visible") ? Std.parseInt("visible") == 1 : false;
-
 		var properties = new Map<String, String>();
 		var image:TilesetImage = null;
 
@@ -83,8 +54,8 @@ class ImageLayer {
 			if(Helper.isValidElement(child)) {
 				if(child.nodeName == "properties") {
 					for(property in child) {
-						if(Helper.isValidElement(property)) {
-							properties.set(property.get("name"), property.get("value"));
+						if (Helper.isValidElement(property)) {
+							Helper.setProperty(property, properties);
 						}
 					}
 				}
@@ -92,7 +63,7 @@ class ImageLayer {
 
 			if (child.nodeName == "image") {
 				var prefix = Path.directory(tiledMap.path) + "/";
-				image = new TilesetImage(child.get("source"), child.get("trans"), prefix);
+				image = TilesetImage.fromGenericXml(child, prefix);
 			}
 		}
 
