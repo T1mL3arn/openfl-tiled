@@ -25,9 +25,32 @@ class TerrainType {
 
 	public var name(default, null):String;
 	public var tileId(default, null):Int;
+	public var properties(default, null):Map<String, String>;
 
-	public function new(name:String, tileId:Int) {
+	public function new(name:String, tileId:Int, properties:Map<String, String>) {
 		this.name = name;
 		this.tileId = tileId;
+		this.properties = properties;
+	}
+	
+	public static function fromGenericXml(xml:Xml):TerrainType
+	{
+		var name:String = xml.get('name');
+		var tileId:Int = Std.parseInt(xml.get("tile"));
+		var properties:Map<String, String> = new Map<String, String>();
+		
+		for (child in xml) {
+			if (Helper.isValidElement(child)) {
+				if (child.nodeName == "properties") {
+					for (property in child) {
+						if (Helper.isValidElement(property)) {
+							Helper.setProperty(property, properties);
+						}
+					}
+				}
+			}
+		}
+		
+		return new TerrainType(name, tileId, properties);
 	}
 }
