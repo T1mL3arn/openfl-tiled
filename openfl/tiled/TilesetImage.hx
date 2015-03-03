@@ -30,23 +30,30 @@ class TilesetImage {
 	/** The filepath where this image is */
 	public var source(default, null):String;
 
-	/** The filename */
+	/** The filename with extension */
 	public var fileName(default, null):String;
 
 	/** The width of this image */
-	public var width(get_width, null):Int;
+	public var width(default, null):Int;
 
 	/** The height of this image */
-	public var height(get_height, null):Int;
-
+	public var height(default, null):Int;
+	
+	/** File format of embeded `data` element. */
+	public var format(default, null):String;
+	
 	/** The image as BitmapData */
 	public var texture(default, null):BitmapData;
 
-	public function new(source:String, trans:String, ?mapPrefix:String) {
+	public function new(source:String, trans:String, format:String, width:Int, height:Int, ?mapPrefix:String) {
 		this.source = source;
+		this.format = format;
+		this.width = width;
+		this.height = height;
+		
 		// get fileName from path
 		this.fileName = source.substr(source.lastIndexOf("/") + 1, source.length);
-
+		
 		var useTransparentColor = false;
 		var threshold:UInt = -1;
 		var transparent:UInt = 0x00000000;
@@ -56,28 +63,35 @@ class TilesetImage {
 
 			// insert hex prefix and 255 alpha
 			trans = "0xff" + trans;
-
 			threshold = Std.parseInt(trans);
 		}
 
 		// load image
-		this.texture = Helper.getBitmapData(this.source, mapPrefix);
+		//this.texture = Helper.getBitmapData(this.source, mapPrefix);
+		var onComplete = function (image:BitmapData):Void
+		{
+			this.texture =  image;
+			
+			if (useTransparentColor && image != null) 
+			{
+				var rect = new Rectangle(0, 0, this.texture.width, this.texture.height);
+				var point = new Point(0, 0);
 
-		if(useTransparentColor) {
-			var rect = new Rectangle(0, 0, this.texture.width, this.texture.height);
-			var point = new Point(0, 0);
-
-			this.texture.threshold(this.texture, rect, point, "==",
-				threshold, transparent, 0xFFFFFFFF, true);
-		}
+				this.texture.threshold(this.texture, rect, point, "==", threshold, transparent, 0xFFFFFFFF, true);
+			}
+		};
+		
+		Assets.loadBitmapData(Helper.joinPath(mapPrefix, this.source), onComplete);
 	}
-
-	private function get_width():Int {
-		return this.texture.width;
+	
+	public static function fromGenericXml(xml:Xml, ?mapPrefix:String):TilesetImage
+	{
+		var source:String = xml.get('source');
+		var format:String = xml.get('format');
+		var trans:String = xml.get('trans');
+		var width:Int = Std.parseInt(xml.get('width'));
+		var height:Int = Std.parseInt(xml.get('height'));
+		
+		return new TilesetImage(source, trans, format, width, height, mapPrefix);
 	}
-
-	private function get_height():Int {
-		return this.texture.height;
-	}
-
 }
