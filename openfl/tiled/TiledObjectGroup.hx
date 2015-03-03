@@ -75,7 +75,7 @@ class TiledObjectGroup {
 				if (child.nodeName == "properties") {
 					for (property in child) {
 						if (Helper.isValidElement(property)) {
-							properties.set(property.get("name"), property.get("value"));
+							Helper.setProperty(property, properties);
 						}
 					}
 				}
@@ -88,7 +88,12 @@ class TiledObjectGroup {
 
 		return new TiledObjectGroup(name, color, width, height, properties, objects);
 	}
-
+	
+	public inline function iterator():Iterator<TiledObject> {
+		objectCounter = 0;
+		return this;
+	}
+	
 	public function hasNext():Bool {
 		if(objectCounter < objects.length) {
 			return true;
@@ -98,8 +103,25 @@ class TiledObjectGroup {
 		}
 	}
 
-	public function next():TiledObject {
+	public inline function next():TiledObject {
 		return objects[objectCounter++];
 	}
-
+	
+	/** Gets the TiledObject by given name or null if it doesn't exist. */
+	public function getObjectByName(name:String):Null<TiledObject> {
+		for (object in objects)
+			if (object.name == name)
+				return object;
+				
+		return null;
+	}
+	
+	/** Gets the TiledObject by given type or null if it doesn't exist. */
+	public function getObjectByType(type:String):Null<TiledObject> {
+		for (object in objects)
+			if (object.type == type)
+				return object;
+		
+		return null;
+	}
 }
