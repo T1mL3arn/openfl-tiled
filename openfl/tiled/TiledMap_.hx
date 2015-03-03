@@ -1,8 +1,32 @@
 package openfl.tiled;
 import haxe.io.Path;
-import lime.net.URLRequest;
+import openfl.net.URLRequest;
 import openfl.events.Event;
 import openfl.net.URLLoader;
+
+// --------------------------------------------------
+// Some enums
+// --------------------------------------------------
+
+/** Tiled map render order. Tiled supports right-down (the default), right-up, left-down and left-up*/
+enum TiledMapRenderOrder
+{
+	RIGHT_DOWN;
+	RIGHT_UP;
+	LEFT_DOWN;
+	LEFT_UP;
+	right_down;
+}
+
+/** Map orientation. Tiled supports "orthogonal", "isometric" and "staggered". */
+enum TiledMapOrientation {
+		Orthogonal;
+		Isometric;
+		Staggered;
+}
+
+// --------------------------------------------------
+// --------------------------------------------------
 
 /**
  * ...
@@ -89,6 +113,12 @@ class TiledMap_
 
 	/** The background color of the map */
 	public var backgroundColor(default, null):UInt;
+	
+	/** The order in which tiles on tile layers are rendered */
+	public var renderOrder(default, null):TiledMapRenderOrder;
+	
+	/** All map properties */
+	public var properties(default, null):Map<String, String>;
 
 	/** All tilesets the map is using */
 	public var tilesets(default, null):Array<Tileset>;
@@ -101,10 +131,7 @@ class TiledMap_
 
 	/** All image layers **/
 	public var imageLayers(default, null):Array<ImageLayer>;
-
-	/** All map properties */
-	public var properties(default, null):Map<String, String>;
-
+	
 	public var backgroundColorSet(default, null):Bool = false;
 	
 	private function new(path:String) 
@@ -119,15 +146,29 @@ class TiledMap_
 
 		this.widthInTiles = Std.parseInt(xml.get("width"));
 		this.heightInTiles = Std.parseInt(xml.get("height"));
-		this.orientation = xml.get("orientation") == "orthogonal" ?
-			TiledMapOrientation.Orthogonal : TiledMapOrientation.Isometric;
+		this.orientation = 
+		switch(xml.get("orientation"))
+		{
+			case "orthogonal" :	TiledMapOrientation.Orthogonal;
+			case "isometric" :	TiledMapOrientation.Isometric;
+			case "staggered":	TiledMapOrientation.Staggered;
+			default:			TiledMapOrientation.Orthogonal;
+		}
+		this.renderOrder =
+		switch(xml.get('renderorder'))
+		{
+			case "left-up":		TiledMapRenderOrder.LEFT_UP;
+			case "left-down":	TiledMapRenderOrder.LEFT_DOWN;
+			case "right-up":	TiledMapRenderOrder.RIGHT_UP;
+			default:			TiledMapRenderOrder.RIGHT_DOWN;
+		}
 		this.tileWidth = Std.parseInt(xml.get("tilewidth"));
 		this.tileHeight = Std.parseInt(xml.get("tileheight"));
-		this.tilesets = new Array<Tileset>();
-		this.layers = new Array<Layer>();
-		this.objectGroups = new Array<TiledObjectGroup>();
-		this.imageLayers = new Array<ImageLayer>();
-		this.properties = new Map<String, String>();
+		this.tilesets = new Array<Tileset>();					// Наборы тайлов
+		this.layers = new Array<Layer>();						// Слои тайлов
+		this.objectGroups = new Array<TiledObjectGroup>();		// Слои групп объектов
+		this.imageLayers = new Array<ImageLayer>();				// Слои изображений
+		this.properties = new Map<String, String>();			
 
 		// get background color
 		var backgroundColor:String = xml.get("backgroundcolor");
@@ -141,7 +182,7 @@ class TiledMap_
 
 			this.backgroundColor = Std.parseInt(backgroundColor);
 		} else {
-			this.backgroundColor = 0x00000000;
+			this.backgroundColor = 0xFF7D7D7D;
 		}
 
 		for (child in xml) {
@@ -151,30 +192,34 @@ class TiledMap_
 
 					if (child.get("source") != null) {
 						var prefix = Path.directory(this.path) + "/";
-						tileset = Tileset.fromGenericXml2(this, Helper.getText(child.get("source"), prefix));
-					} else {
-						tileset = Tileset.fromGenericXml2(this, child.toString());
+						tileset = Tileset.fromGenericXml(this, Helper.getText(child.get("source"), prefix));
+					} 
+					else {
+						tileset = Tileset.fromGenericXml(this, child.toString());
 					}
 
 					tileset.setFirstGID(Std.parseInt(child.get("firstgid")));
 
 					this.tilesets.push(tileset);
-				} else if (child.nodeName == "properties") {
+				} 
+				else if (child.nodeName == "properties") {
 					for (property in child) {
-						if (!Helper.isValidElement(property))
-							continue;
-						properties.set(property.get("name"), property.get("value"));
+						if (Helper.isValidElement(property))
+							Helper.setProperty(property, properties);
 					}
-				} else if (child.nodeName == "layer") {
-					var layer:Layer = Layer.fromGenericXml2(child, this);
+				} 
+				else if (child.nodeName == "layer") {
+					var layer:Layer = Layer.fromGenericXml(child, this);
 
 					this.layers.push(layer);
-				} else if (child.nodeName == "objectgroup") {
+				} 
+				else if (child.nodeName == "objectgroup") {
 					var objectGroup = TiledObjectGroup.fromGenericXml(child);
 
 					this.objectGroups.push(objectGroup);
-				} else if (child.nodeName == "imagelayer") {
-					var imageLayer = ImageLayer.fromGenericXml2(this, child);
+				} 
+				else if (child.nodeName == "imagelayer") {
+					var imageLayer = ImageLayer.fromGenericXml(this, child);
 
 					this.imageLayers.push(imageLayer);
 				}
@@ -196,6 +241,59 @@ class TiledMap_
 		}
 
 		return tileset;
+	}
+	
+	/**
+	 * Returns the Tileset whith given name or "null" if it doesn't exist; 
+	 * @param	name Name of Tileset.
+	 * @return	Tileset whith given name or "null" if it doesn't exist;  
+	 */
+	public function getTilesetByName(name:String):Tileset
+	{	
+		for (tileset in this.tilesets)
+			if (tileset.name == name)
+				return tileset;
+				
+		return null;
+	}
+	
+	/**
+	 * Returns the TilesetImage with given GID.
+	 * 
+	 * @param	gid	GID for search
+	 * @return	TilesetImage with given GID or null if it doesn't exist.
+	 */
+	public function getImageByGID(gid:Int):Null<TilesetImage> {
+		var tileset:Tileset = null;
+		//var masked_gid:Int = 0x1FFFFFFF & gid;		// mask flip flags
+		for (i in 0...tilesets.length)
+			if (gid >= tilesets[i].firstGID)
+				tileset = tilesets[i];
+				
+		if (tileset != null)
+			return tileset.tiles[gid - tileset.firstGID].image;
+		else	
+			return null;
+	}
+	
+	/**
+	 * Returns the Tile by given GID.
+	 * 
+	 * @param	gid GID for search
+	 * @return	Tile or null if it doesnt exist.
+	 */
+	public function getTileByGID(gid):Null<Tile> {
+		var t:Tile = null;
+		var tileset:Tileset = null;
+		//var masked_gid:Int = 0x1FFFFFFF & gid; 		// mask flip flags
+		for (i in 0...tilesets.length)
+			if (gid >= tilesets[i].firstGID)
+				tileset = tilesets[i];
+		
+		if (tileset != null)
+			return tileset.tiles[gid - tileset.firstGID];
+		else 
+			return null;
 	}
 
 	/**
