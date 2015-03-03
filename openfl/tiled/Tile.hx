@@ -24,27 +24,64 @@ package openfl.tiled;
 import flash.display.BitmapData;
 
 class Tile {
+	
+	/** The local tile ID within its tileset. */
+	public var id(default, null):Int;
+	
+	/** All properties this Tile contains */
+	public var properties(default, null):Map<String, String>;
+	
+	/** Single image associated with Tile. Each tile from image-based Tileset has this property. */
+	public var image(default, null):TilesetImage;
+	
+	/** Object group that represent collision layer for this Tile. */
+	public var objectGroup(default, null):TiledObjectGroup;
+	
+	/** Terrain information. */
+	public var terrain(default, null):String;
+	
+	/** A percentage indicating the probability that this tile is chosen when it competes with others. */
+	public var probability(default, null):String;
 
-	public var gid(default, null):Int;
-	public var parent(default, null):Layer;
-	public var width(get_width, null):Int;
-	public var height(get_height, null):Int;
-
-	private function new(gid:Int, parent:Layer) {
-		this.gid = gid;
-		this.parent = parent;
+	private function new(id:Int, terrain:String, probability:String, properties:Map<String, String> = null, image:TilesetImage = null, objectGroup:TiledObjectGroup = null) 
+	{
+		this.id = id;
+		this.terrain = terrain;
+		this.image = image;
+		this.properties = properties;
+		this.objectGroup = objectGroup;
+		this.probability = probability;
 	}
-
-	public static function fromGID(gid:Int, parent:Layer):Tile {
-		return new Tile(gid, parent);
+	
+	public static function fromGenericXml(xml:Xml, ?mapPrefix:String):Tile
+	{
+		var id:Int = Std.parseInt(xml.get('id'));
+		var terrain:String = xml.get("terrain");
+		var probability:String = xml.get('probability');
+		var properties:Map<String, String> = new Map<String, String>();
+		var image:TilesetImage = null;
+		var objectGroup:TiledObjectGroup = null;
+		
+		for (child in xml) {
+			if (Helper.isValidElement(child)) {
+				if (child.nodeName == "properties" ) {
+					for (property in child) {
+						if (Helper.isValidElement(property)) {
+							Helper.setProperty(property, properties);
+						}
+					}
+				}
+				
+				if (child.nodeName == "image") {
+					image = TilesetImage.fromGenericXml(child, mapPrefix);
+				}
+				
+				if (child.nodeName == "objectgroup") {
+					objectGroup = TiledObjectGroup.fromGenericXml(child);
+				}
+			}
+		}
+		
+		return new Tile(id, terrain, probability, properties, image, objectGroup);
 	}
-
-	private function get_width():Int {
-		return parent.parent.tileWidth;
-	}
-
-	private function get_height():Int {
-		return parent.parent.tileHeight;
-	}
-
 }
