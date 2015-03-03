@@ -58,20 +58,20 @@ class Tileset {
 	/** All properties this Tileset contains */
 	public var properties(default, null):Map<String, String>;
 
-	/** All tiles with special properties */
-	public var propertyTiles(default, null):Map<Int, PropertyTile>;
-
 	/** All terrain types */
 	public var terrainTypes(default, null):Array<TerrainType>;
+	
+	/** All tiles this Tileset contains */
+	public var tiles(default, null):Array<Tile>;
 
-	/** The image of this tileset */
+	/** The image of this Tileset */
 	public var image(default, null):TilesetImage;
 
 	/** The tile offset */
 	public var offset(default, null):Point;
 
 	private function new(tiledMap:TiledMap_, name:String, tileWidth:Int, tileHeight:Int, spacing:Int,
-			properties:Map<String, String>, terrainTypes:Array<TerrainType>, image:TilesetImage, offset:Point) {
+			properties:Map<String, String>, terrainTypes:Array<TerrainType>, image:TilesetImage, offset:Point, tiles:Array<Tile>) {
 		this.tiledMap = tiledMap;
 		this.name = name;
 		this.tileWidth = tileWidth;
@@ -81,90 +81,16 @@ class Tileset {
 		this.terrainTypes = terrainTypes;
 		this.image = image;
 		this.offset = offset;
+		this.tiles = tiles;
 	}
 
 	/** Sets the first GID. */
 	public function setFirstGID(gid:Int) {
 		this.firstGID = gid;
 	}
-
-	/** Generates a new Tileset from the given Xml code */
-	/*public static function fromGenericXml(tiledMap:TiledMap, content:String):Tileset {
-		var xml = Xml.parse(content).firstElement();
-
-		var name:String = xml.get("name");
-		var tileWidth:Int = Std.parseInt(xml.get("tilewidth"));
-		var tileHeight:Int = Std.parseInt(xml.get("tileheight"));
-		var spacing:Int = xml.exists("spacing") ? Std.parseInt(xml.get("spacing")) : 0;
-		var properties:Map<String, String> = new Map<String, String>();
-		var propertyTiles:Map<Int, PropertyTile> = new Map<Int, PropertyTile>();
-		var terrainTypes:Array<TerrainType> = new Array<TerrainType>();
-		var image:TilesetImage = null;
-
-		var tileOffsetX:Int = 0;
-		var tileOffsetY:Int = 0;
-
-		for (child in xml.elements()) {
-			if(Helper.isValidElement(child)) {
-				if (child.nodeName == "properties") {
-					for (property in child) {
-						if (Helper.isValidElement(property)) {
-							properties.set(property.get("name"), property.get("value"));
-						}
-					}
-				}
-
-				if (child.nodeName == "tileoffset") {
-					tileOffsetX = Std.parseInt(child.get("x"));
-					tileOffsetY = Std.parseInt(child.get("y"));
-				}
-
-				if (child.nodeName == "image") {
-					var prefix = Path.directory(tiledMap.path) + "/";
-					image = new TilesetImage(child.get("source"), child.get("trans"), prefix);
-				}
-
-				if (child.nodeName == "terraintypes") {
-					for (element in child) {
-
-						if(Helper.isValidElement(element)) {
-							if(element.nodeName == "terrain") {
-								terrainTypes.push(new TerrainType(element.get("name"), Std.parseInt(element.get("tile"))));
-							}
-						}
-					}
-				}
-
-				if (child.nodeName == "tile") {
-					var id:Int = Std.parseInt(child.get("id"));
-					var properties:Map<String, String> = new Map<String, String>();
-
-					for (element in child) {
-
-						if(Helper.isValidElement(element)) {
-							if (element.nodeName == "properties") {
-								for (property in element) {
-									if (!Helper.isValidElement(property)) {
-										continue;
-									}
-
-									properties.set(property.get("name"), property.get("value"));
-								}
-							}
-						}
-					}
-
-					propertyTiles.set(id, new PropertyTile(id, properties));
-				}
-			}
-		}
-
-		return new Tileset(tiledMap, name, tileWidth, tileHeight, spacing, properties, terrainTypes,
-			image, new Point(tileOffsetX, tileOffsetY));
-	}*/
 	
 	/** Generates a new Tileset from the given Xml code */
-	public static function fromGenericXml2(tiledMap:TiledMap_, content:String):Tileset {
+	public static function fromGenericXml(tiledMap:TiledMap_, content:String):Tileset {
 		var xml = Xml.parse(content).firstElement();
 
 		var name:String = xml.get("name");
@@ -172,72 +98,55 @@ class Tileset {
 		var tileHeight:Int = Std.parseInt(xml.get("tileheight"));
 		var spacing:Int = xml.exists("spacing") ? Std.parseInt(xml.get("spacing")) : 0;
 		var properties:Map<String, String> = new Map<String, String>();
-		var propertyTiles:Map<Int, PropertyTile> = new Map<Int, PropertyTile>();
 		var terrainTypes:Array<TerrainType> = new Array<TerrainType>();
 		var image:TilesetImage = null;
-
-		var tileOffsetX:Int = 0;
-		var tileOffsetY:Int = 0;
-
+		var tileOffset:Point = new Point();
+		var tiles:Array<Tile> = new Array<Tile>();
+		var prefix = Path.directory(tiledMap.path) + "/";
+		
 		for (child in xml.elements()) {
 			if(Helper.isValidElement(child)) {
 				if (child.nodeName == "properties") {
-					for (property in child) {
-						if (Helper.isValidElement(property)) {
-							properties.set(property.get("name"), property.get("value"));
-						}
-					}
+					for (property in child)
+						if (Helper.isValidElement(property))
+							Helper.setProperty(property, properties);
 				}
 
 				if (child.nodeName == "tileoffset") {
-					tileOffsetX = Std.parseInt(child.get("x"));
-					tileOffsetY = Std.parseInt(child.get("y"));
+					tileOffset.x = Std.parseInt(child.get("x"));
+					tileOffset.y = Std.parseInt(child.get("y"));
 				}
 
 				if (child.nodeName == "image") {
-					var prefix = Path.directory(tiledMap.path) + "/";
-					image = new TilesetImage(child.get("source"), child.get("trans"), prefix);
+					image = TilesetImage.fromGenericXml(child, prefix);
 				}
 
 				if (child.nodeName == "terraintypes") {
 					for (element in child) {
-
 						if(Helper.isValidElement(element)) {
-							if(element.nodeName == "terrain") {
-								terrainTypes.push(new TerrainType(element.get("name"), Std.parseInt(element.get("tile"))));
+							if (element.nodeName == "terrain") {
+								terrainTypes.push(TerrainType.fromGenericXml(element));
 							}
 						}
 					}
 				}
 
 				if (child.nodeName == "tile") {
-					var id:Int = Std.parseInt(child.get("id"));
-					var properties:Map<String, String> = new Map<String, String>();
-
-					for (element in child) {
-
-						if(Helper.isValidElement(element)) {
-							if (element.nodeName == "properties") {
-								for (property in element) {
-									if (!Helper.isValidElement(property)) {
-										continue;
-									}
-
-									properties.set(property.get("name"), property.get("value"));
-								}
-							}
-						}
-					}
-
-					propertyTiles.set(id, new PropertyTile(id, properties));
+					tiles.push(Tile.fromGenericXml(child, prefix));
 				}
 			}
 		}
 
 		return new Tileset(tiledMap, name, tileWidth, tileHeight, spacing, properties, terrainTypes,
-			image, new Point(tileOffsetX, tileOffsetY));
+			image, tileOffset, tiles);
 	}
-
+	
+	/** Returns TilesetImage by GID */
+	public inline function getImageByGID(gid:Int):TilesetImage {
+			return tiles[gid - firstGID].image;
+			//return tiles[0x1FFFFFFF & gid - this.firstGID].image;
+	}
+	
 	/** Returns the BitmapData of the given GID */
 	public function getTileRectByGID(gid:Int):Rectangle {
 		var texturePositionX:Float = getTexturePositionByGID(gid).x;
